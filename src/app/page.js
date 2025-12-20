@@ -19,26 +19,50 @@ export default function Home() {
     setActiveAction(actionType);
     setResult("");
 
-    // Simulate API call
-    setTimeout(() => {
-      let mockResponse = "";
+    try {
+      // First, parse the article
+      const parseResponse = await fetch('/api/parse', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!parseResponse.ok) {
+        throw new Error('Ошибка при парсинге статьи');
+      }
+
+      const articleData = await parseResponse.json();
+
+      if (articleData.error) {
+        throw new Error(articleData.error);
+      }
+
+      // Display parsed data based on action type
+      let displayResult = "";
+
       switch (actionType) {
         case "summary":
-          mockResponse = `**Краткое содержание статьи:**\n\nЭта статья обсуждает современные подходы к веб-разработке, акцентируя внимание на производительности и пользовательском опыте. Автор подчеркивает важность использования современных фреймворков, таких как Next.js, для достижения высоких результатов в SEO и скорости загрузки.`;
+          displayResult = `**📄 Информация о статье:**\n\n**Заголовок:** ${articleData.title}\n\n**Дата публикации:** ${articleData.date}\n\n**Контент (фрагмент):**\n${articleData.content.substring(0, 500)}${articleData.content.length > 500 ? '...' : ''}`;
           break;
         case "theses":
-          mockResponse = `**Основные тезисы:**\n\n1. Важность Server-Side Rendering (SSR).\n2. Оптимизация изображений и шрифтов.\n3. Использование Edge Computing для снижения задержек.\n4. Минималистичный дизайн интерфейсов.`;
+          displayResult = `**📋 Структурированные данные:**\n\n\`\`\`json\n${JSON.stringify(articleData, null, 2)}\n\`\`\``;
           break;
         case "telegram":
-          mockResponse = `🚀 **Новый пост в блоге!**\n\nВсем привет! Наткнулся на интересную статью про тренды веб-разработки 2025 года. 🔥\n\nОсновные моменты:\n- Next.js продолжает доминировать.\n- Скорость загрузки — критический фактор ранжирования.\n\n👇 Читать полную версию:\n${url}\n\n#webdev #nextjs #coding #tech`;
+          displayResult = `**📱 Данные для Telegram-поста:**\n\n**Заголовок:** ${articleData.title}\n**Дата:** ${articleData.date}\n**URL:** ${url}\n\n**Превью контента:**\n${articleData.content.substring(0, 300)}...`;
           break;
         default:
-          mockResponse = "Действие выполнено.";
+          displayResult = JSON.stringify(articleData, null, 2);
       }
-      setResult(mockResponse);
+
+      setResult(displayResult);
+    } catch (error) {
+      setResult(`❌ **Ошибка:** ${error.message}\n\nПроверьте корректность URL и доступность сайта.`);
+    } finally {
       setLoading(false);
       setActiveAction(null);
-    }, 1500);
+    }
   };
 
   return (
