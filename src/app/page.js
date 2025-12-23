@@ -77,7 +77,9 @@ export default function Home() {
 
       if (!aiResponse.ok) {
         const errorData = await aiResponse.json();
-        throw new Error(errorData.error || 'Ошибка при обработке AI');
+        const err = new Error(errorData.error || 'Ошибка при обработке AI');
+        err.details = errorData.details;
+        throw err;
       }
 
       const aiData = await aiResponse.json();
@@ -91,7 +93,7 @@ export default function Home() {
 
       setResult(displayResult);
     } catch (error) {
-      setResult(`❌ **Ошибка:** ${error.message}\n\nПроверьте корректность URL и доступность сайта.`);
+      setResult(`❌ **Ошибка:** ${error.message}${error.details ? '\n\nДетали: ' + JSON.stringify(error.details) : ''}\n\nПроверьте корректность URL и доступность сайта.`);
     } finally {
       setLoading(false);
       setActiveAction(null);
@@ -124,14 +126,17 @@ export default function Home() {
       });
 
       if (!aiResponse.ok) {
-        throw new Error('Ошибка при анализе заголовков');
+        const errorData = await aiResponse.json();
+        const err = new Error(errorData.error || 'Ошибка при анализе заголовков');
+        err.details = errorData.details;
+        throw err;
       }
 
       const aiData = await aiResponse.json();
       setResult(`**🔍 Анализ влияния мировых СМИ:**\n\n${aiData.translation}`);
 
     } catch (error) {
-      setResult(`❌ **Ошибка:** ${error.message}`);
+      setResult(`❌ **Ошибка:** ${error.message}${error.details ? '\n\nДетали: ' + JSON.stringify(error.details) : ''}`);
     } finally {
       setLoading(false);
       setActiveAction(null);
