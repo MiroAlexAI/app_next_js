@@ -61,7 +61,10 @@ export default function Home() {
       }
 
       // Call AI API for both actions
-      setResult(actionType === 'telegram' ? "✍️ Генерируем Telegram-пост..." : "🧐 Анализируем влияние на рынки...");
+      setResult({
+        text: actionType === 'telegram' ? "✍️ Генерируем Telegram-пост..." : "🧐 Анализируем влияние на рынки...",
+        model: "Система"
+      });
 
       const aiResponse = await fetch('/api/translate', {
         method: 'POST',
@@ -115,7 +118,10 @@ export default function Home() {
 
     setLoading(true);
     setActiveAction("headlines_analysis");
-    setResult("🕵️‍♂️ Изучаем информационную повестку...");
+    setResult({
+      text: "🕵️‍♂️ Изучаем информационную повестку...",
+      model: "Система"
+    });
 
     try {
       const headlinesText = headlines.map(h => `- [${h.source}] ${h.title}`).join('\n');
@@ -140,6 +146,7 @@ export default function Home() {
         throw err;
       }
 
+      const aiData = await aiResponse.json();
       setResult({
         text: `**🔍 Анализ влияния мировых СМИ:**\n\n${aiData.translation}`,
         model: aiData.model
