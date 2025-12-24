@@ -17,6 +17,22 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [stats, setStats] = useState({ total_requests: 0, telegram_posts: 0, analytics: 0, headlines: 0 });
   const [theme, setTheme] = useState("dark"); // "dark" or "light"
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceSpeed, setVoiceSpeed] = useState(1.25); // 1.0, 1.25, 1.4
+  const [availableVoices, setAvailableVoices] = useState([]);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      setAvailableVoices(voices.filter(v => v.lang.startsWith('ru')));
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("app_theme") || "dark";
@@ -29,6 +45,36 @@ export default function Home() {
     setTheme(newTheme);
     document.documentElement.setAttribute("data-theme", newTheme);
     localStorage.setItem("app_theme", newTheme);
+  };
+
+  const toggleSpeech = (text) => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    // Очистка markdown для чистого чтения
+    const cleanText = text
+      .replace(/[*#_>`~]/g, '') // Удаляем спецсимволы markdown
+      .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Оставляем только текст ссылок
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = voiceSpeed;
+    utterance.pitch = 0.7; // Низкий тембр
+
+    // Автоматический подбор лучшего женского голоса
+    const russianVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('ru'));
+    const femaleVoice = russianVoices.find(v => v.name.toLowerCase().includes('irina') || v.name.toLowerCase().includes('katya') || v.name.toLowerCase().includes('elena')) || russianVoices[0];
+
+    if (femaleVoice) utterance.voice = femaleVoice;
+
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
   };
 
   const fetchStats = async () => {
@@ -497,13 +543,49 @@ export default function Home() {
                       Совет: если ответ отсутствует, повторите через 30-60 сек для восстановления лимитов или попробуйте другую ссылку.
                     </span>
                   </div>
-                  <div className="mt-6 pt-6 border-t border-stone-800/50 flex justify-end">
-                    <button
-                      onClick={() => navigator.clipboard.writeText(result.text)}
-                      className="text-[9px] font-black uppercase text-stone-700 hover:text-orange-600 transition-colors tracking-widest"
-                    >
-                      Копировать результат
-                    </button>
+                  <div className="mt-6 pt-6 border-t border-stone-800/50 flex flex-wrap items-center justify-end gap-x-8 gap-y-4">
+                    {/* Voice Controls */}
+                    <div className="flex items-center gap-6 bg-[var(--input-bg)]/50 px-5 py-2 rounded-full border border-[var(--border-color)]">
+                      <span className="text-[8px] font-black text-stone-600 uppercase tracking-widest">Скорость</span>
+                      <div className="flex gap-4">
+                        {[1.0, 1.25, 1.4].map(speed => (
+                          <button
+                            key={speed}
+                            onClick={() => setVoiceSpeed(speed)}
+                            className={`text-[9px] font-black transition-all ${voiceSpeed === speed ? "text-orange-500 scale-110" : "text-stone-700 hover:text-stone-500"}`}
+                          >
+                            {speed}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                      <button
+                        onClick={() => toggleSpeech(result.text)}
+                        className={`text-[9px] font-black uppercase flex items-center gap-2 transition-colors tracking-widest ${isSpeaking ? 'text-orange-500 animate-pulse' : 'text-stone-700 hover:text-orange-600'}`}
+                        title={isSpeaking ? "Остановить" : "Прослушать"}
+                      >
+                        {isSpeaking ? (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+                            Остановить
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                            Озвучить
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(result.text)}
+                        className="text-[9px] font-black uppercase text-stone-700 hover:text-orange-600 transition-colors tracking-widest flex items-center gap-2"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                        Копировать
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
