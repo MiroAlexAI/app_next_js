@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -340,7 +342,7 @@ export default function Home() {
                     </div>
                     <p className="text-sm font-bold text-stone-200 mb-2">{item.title}</p>
                     <div
-                      className="text-xs text-stone-500 line-clamp-3 cursor-pointer hover:text-stone-300 transition-colors"
+                      className="text-xs text-stone-500 line-clamp-3 cursor-pointer hover:text-stone-300 transition-colors markdown-content"
                       onClick={() => {
                         setResult({ text: item.text, model: item.model });
                         setNewsCategory("global"); // Switch back to show result in main area
@@ -349,7 +351,9 @@ export default function Home() {
                         }, 100);
                       }}
                     >
-                      {item.text.replace(/\*\*/g, '')}
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {item.text}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 ))
@@ -448,8 +452,10 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="prose prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap leading-relaxed text-stone-400 text-sm font-medium">
-                    {result.text}
+                  <div className="leading-relaxed text-stone-400 text-sm font-medium markdown-content">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {result.text}
+                    </ReactMarkdown>
                   </div>
                   <div className="mt-4 flex flex-col gap-1 border-stone-900/40 pt-4 border-t">
                     <span className="text-[9px] font-black uppercase tracking-widest text-stone-700">
@@ -475,8 +481,13 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="py-8 text-center text-stone-800 text-[9px] font-black tracking-[0.4em] uppercase relative z-10">
-        <p>A.I. ANALYST • DESERT OPS • V1.5</p>
+      <footer className="py-8 text-center space-y-2 relative z-10">
+        <p className="text-stone-800 text-[9px] font-black tracking-[0.4em] uppercase">
+          A.I. ANALYST • DESERT OPS • V1.5
+        </p>
+        <p className="text-stone-600 text-[10px] font-bold uppercase tracking-widest">
+          поблагодарить автора telegram <a href="https://t.me/krabig" target="_blank" rel="noopener noreferrer" className="text-orange-900 hover:text-orange-500 transition-colors">@krabig</a>
+        </p>
       </footer>
     </div>
   );
