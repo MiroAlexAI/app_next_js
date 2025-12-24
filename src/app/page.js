@@ -204,7 +204,7 @@ export default function Home() {
         id: Date.now(),
         text: displayResult,
         model: aiData.model,
-        url: null,
+        url: `Новостные заголовки ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
         title: "Сводка заголовков",
         date: new Date().toLocaleString('ru-RU')
       });
@@ -322,14 +322,20 @@ export default function Home() {
                         {item.date} • {item.model}
                       </span>
                       {item.url && (
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[9px] font-black text-stone-600 hover:text-orange-600 uppercase transition-colors"
-                        >
-                          Источник ↗
-                        </a>
+                        item.url.startsWith('http') ? (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[9px] font-black text-stone-600 hover:text-orange-600 uppercase transition-colors"
+                          >
+                            Источник ↗
+                          </a>
+                        ) : (
+                          <span className="text-[9px] font-black text-stone-700 uppercase tracking-tight">
+                            {item.url}
+                          </span>
+                        )
                       )}
                     </div>
                     <p className="text-sm font-bold text-stone-200 mb-2">{item.title}</p>
