@@ -85,8 +85,19 @@ export async function GET(request) {
         { name: '1С:ТОИР (RU)', sources: [{ url: 'https://1ctoir.ru/news/', type: 'scrape', selector: '.news-item__title a', baseUrl: 'https://1ctoir.ru' }] },
         { name: 'Управление производством (RU)', sources: [{ url: 'https://up-pro.ru/feed/', type: 'rss' }] },
         { name: 'Prostoev.net (RU)', sources: [{ url: 'https://prostoev.net/feed/', type: 'rss' }] },
+        { name: 'CNews.ru (RU)', sources: [{ url: 'https://www.cnews.ru/rss', type: 'rss' }] },
+        { name: 'Avtprom.ru (RU)', sources: [{ url: 'https://avtprom.ru/rss.xml', type: 'rss' }] },
+        { name: 'Ipc2u (RU)', sources: [{ url: 'https://ipc2u.ru/news/rss/', type: 'rss' }] },
+        { name: 'CTA (RU)', sources: [{ url: 'https://www.cta.ru/rss/', type: 'rss' }] },
         { name: 'Asian Power (Asia)', sources: [{ url: 'https://asian-power.com/rss', type: 'rss' }] },
+        { name: 'IA Asia (Asia)', sources: [{ url: 'https://iaasiaonline.com/feed', type: 'rss' }] },
+        { name: 'IA India (India)', sources: [{ url: 'https://www.industrialautomationindia.in/rss', type: 'rss' }] },
+        { name: 'Asia Automate (Asia)', sources: [{ url: 'https://www.asiaautomate.com/feed', type: 'rss' }] },
+        { name: 'Control Eng (EU)', sources: [{ url: 'https://controlengeurope.com/feed', type: 'rss' }] },
+        { name: 'IEN (EU)', sources: [{ url: 'https://www.ien.eu/rss', type: 'rss' }] },
         { name: 'Reliable Plant (WW)', sources: [{ url: 'https://www.reliableplant.com/rss', type: 'rss' }] },
+        { name: 'Control Eng (USA)', sources: [{ url: 'https://www.controleng.com/feed/', type: 'rss' }] },
+        { name: 'Automation.com (USA)', sources: [{ url: 'https://www.automation.com/en-us/automation-rss-feed.aspx', type: 'rss' }] },
         { name: 'MRO Magazine (CA)', sources: [{ url: 'https://www.mromagazine.com/feed/', type: 'rss' }] },
         { name: 'ReliabilityWeb', sources: [{ url: 'https://reliabilityweb.com/rss', type: 'rss' }] },
         { name: 'Maintenance World', sources: [{ url: 'https://www.maintenanceworld.com/feed/', type: 'rss' }] },
@@ -110,15 +121,27 @@ export async function GET(request) {
         regionConfigs = globalConfigs;
     }
 
+    const reliabilityKeywords = [
+        'тоир', 'ремонт', 'обслуживание', 'надежность', 'надёжность', 'диагностика', 'мониторинг',
+        'предиктив', 'смазка', 'вибродиагностика', 'сенсоры', 'датчики', 'оборудование', 'активы',
+        'управление активами', 'ппр', 'эксплуатация', 'фонды', 'инспекция', 'контроль',
+        'maintenance', 'reliability', 'asset', 'management', 'rcm', 'fmea', 'tpm', 'predictive',
+        'condition', 'monitoring', 'vibration', 'lubrication', 'ultrasound', 'sensors', 'iot',
+        'industry 4.0', 'spare parts', 'inventory', 'cmms', 'eam', 'iso 55000', 'iso 55001',
+        'oee', 'downtime', 'failure', 'root cause', 'rca', 'mro', 'availability', 'integrity'
+    ];
+
     try {
         const allHeadlines = [];
 
         const regionPromises = regionConfigs.map(async (region) => {
             const regionHeadlines = [];
-            const limitPerSource = (category === 'finance' || category === 'reliability') ? 1 : 2;
+            // Забираем больше для фильтрации в ТОиР
+            const fetchLimit = category === 'reliability' ? 15 : ((category === 'finance') ? 3 : 5);
+            const finalLimit = (category === 'finance' || category === 'reliability') ? 1 : 2;
 
             for (const source of region.sources) {
-                if (regionHeadlines.length >= limitPerSource) break;
+                if (regionHeadlines.length >= finalLimit) break;
 
                 try {
                     const response = await axios.get(source.url, {
@@ -130,30 +153,27 @@ export async function GET(request) {
 
                     const data = response.data;
                     const $ = cheerio.load(data, { xmlMode: true });
+                    const tempItems = [];
 
                     if (source.type === 'rss' || data.includes('<rss') || data.includes('<feed')) {
                         const items = $('item').length > 0 ? $('item') : $('entry');
                         items.each((i, el) => {
-                            if (regionHeadlines.length < ((category === 'finance' || category === 'reliability') ? 1 : 2)) {
+                            if (tempItems.length < fetchLimit) {
                                 let title = $(el).find('title').text() || '';
-                                // Улучшенный поиск ссылки для разных форматов RSS/Atom
                                 let link = $(el).find('link').text() || $(el).find('link').attr('href') || $(el).find('guid').text() || '';
 
-                                // Очистка от CDATA
                                 title = title.replace(/<!\[CDATA\[|\]\]>/g, '').trim();
                                 link = link.replace(/<!\[CDATA\[|\]\]>/g, '').trim();
 
-                                if (title && link && title.length > 20) {
-                                    if (!regionHeadlines.find(h => h.title === title)) {
-                                        regionHeadlines.push({ title, link, source: region.name });
-                                    }
+                                if (title && link && title.length > 15) {
+                                    tempItems.push({ title, link, source: region.name });
                                 }
                             }
                         });
                     } else {
                         // Manual scraping
                         $(source.selector).each((i, el) => {
-                            if (regionHeadlines.length < ((category === 'finance' || category === 'reliability') ? 1 : 2)) {
+                            if (tempItems.length < fetchLimit) {
                                 let title = $(el).text().trim();
                                 let link = $(el).attr('href') || $(el).closest('a').attr('href') || '';
 
@@ -161,12 +181,33 @@ export async function GET(request) {
                                     link = source.baseUrl + link;
                                 }
 
-                                if (title && link && title.length > 25 && !regionHeadlines.find(h => h.title === title)) {
-                                    regionHeadlines.push({ title, link, source: region.name });
+                                if (title && link && title.length > 15) {
+                                    tempItems.push({ title, link, source: region.name });
                                 }
                             }
                         });
                     }
+
+                    // Применяем фильтрацию для ТОиР
+                    if (category === 'reliability') {
+                        const filtered = tempItems.filter(item => {
+                            const lowTitle = item.title.toLowerCase();
+                            return reliabilityKeywords.some(kw => lowTitle.includes(kw));
+                        });
+
+                        // Если есть релевантные - берем их, если нет - берем первую (fallback), 
+                        // но помечаем или просто ограничиваем количество
+                        if (filtered.length > 0) {
+                            regionHeadlines.push(...filtered.slice(0, finalLimit));
+                        } else {
+                            // Если совсем ничего тематического нет, берем самую свежую,
+                            // чтобы источник не казался "мертвым", но только одну.
+                            regionHeadlines.push(tempItems[0]);
+                        }
+                    } else {
+                        regionHeadlines.push(...tempItems.slice(0, finalLimit));
+                    }
+
                 } catch (err) {
                     // console.error(`Error:`, err.message);
                 }
@@ -175,7 +216,13 @@ export async function GET(request) {
         });
 
         const results = await Promise.all(regionPromises);
-        results.forEach(rh => allHeadlines.push(...rh));
+        results.forEach(rh => {
+            rh.forEach(item => {
+                if (item && !allHeadlines.find(h => h.link === item.link)) {
+                    allHeadlines.push(item);
+                }
+            });
+        });
 
         return NextResponse.json(allHeadlines);
     } catch (error) {
