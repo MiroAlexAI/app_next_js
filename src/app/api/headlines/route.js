@@ -76,11 +76,36 @@ export async function GET(request) {
         { name: 'Forbes', sources: [{ url: 'https://www.forbes.com/business/feed/', type: 'rss' }] }
     ];
 
+    const reliabilityConfigs = [
+        { name: 'ECA GMP Academy', sources: [{ url: 'https://www.gmp-compliance.org/gmp-news/rss', type: 'rss' }] },
+        { name: 'Pharma Manufacturing (GMP)', sources: [{ url: 'https://www.pharmamanufacturing.com/rss', type: 'rss' }] },
+        { name: 'Maintworld (EU)', sources: [{ url: 'https://www.maintworld.com/feed', type: 'rss' }] },
+        { name: 'Uptime Magazine', sources: [{ url: 'https://www.uptimemagazine.com/feed/', type: 'rss' }] },
+        { name: 'FacilitiesNet', sources: [{ url: 'https://www.facilitiesnet.com/rss/all/RSS2.xml', type: 'rss' }] },
+        { name: '1С:ТОИР (RU)', sources: [{ url: 'https://1ctoir.ru/news/', type: 'scrape', selector: '.news-item__title a', baseUrl: 'https://1ctoir.ru' }] },
+        { name: 'Управление производством (RU)', sources: [{ url: 'https://up-pro.ru/feed/', type: 'rss' }] },
+        { name: 'Prostoev.net (RU)', sources: [{ url: 'https://prostoev.net/feed/', type: 'rss' }] },
+        { name: 'Asian Power (Asia)', sources: [{ url: 'https://asian-power.com/rss', type: 'rss' }] },
+        { name: 'Reliable Plant (WW)', sources: [{ url: 'https://www.reliableplant.com/rss', type: 'rss' }] },
+        { name: 'MRO Magazine (CA)', sources: [{ url: 'https://www.mromagazine.com/feed/', type: 'rss' }] },
+        { name: 'ReliabilityWeb', sources: [{ url: 'https://reliabilityweb.com/rss', type: 'rss' }] },
+        { name: 'Maintenance World', sources: [{ url: 'https://www.maintenanceworld.com/feed/', type: 'rss' }] },
+        { name: 'Engineering.com', sources: [{ url: 'https://www.engineering.com/Rss.aspx', type: 'rss' }] },
+        { name: 'Accendo Reliability', sources: [{ url: 'https://accendoreliability.com/feed/', type: 'rss' }] },
+        { name: 'Plant Engineering', sources: [{ url: 'https://www.plantengineering.com/feed/', type: 'rss' }] },
+        { name: 'Efficient Plant', sources: [{ url: 'https://www.efficientplantmag.com/feed/', type: 'rss' }] },
+        { name: 'Reliability Connect', sources: [{ url: 'https://reliabilityconnect.com/feed/', type: 'rss' }] },
+        { name: 'BIC Magazine', sources: [{ url: 'https://www.bicmagazine.com/feed/', type: 'rss' }] },
+        { name: 'Processing Magazine', sources: [{ url: 'https://www.processingmagazine.com/maintenance-safety/feed/', type: 'rss' }] }
+    ];
+
     let regionConfigs;
     if (category === 'industry') {
         regionConfigs = industryConfigs;
     } else if (category === 'finance') {
         regionConfigs = financeConfigs;
+    } else if (category === 'reliability') {
+        regionConfigs = reliabilityConfigs;
     } else {
         regionConfigs = globalConfigs;
     }
@@ -90,7 +115,7 @@ export async function GET(request) {
 
         const regionPromises = regionConfigs.map(async (region) => {
             const regionHeadlines = [];
-            const limitPerSource = category === 'finance' ? 1 : 2;
+            const limitPerSource = (category === 'finance' || category === 'reliability') ? 1 : 2;
 
             for (const source of region.sources) {
                 if (regionHeadlines.length >= limitPerSource) break;
@@ -109,7 +134,7 @@ export async function GET(request) {
                     if (source.type === 'rss' || data.includes('<rss') || data.includes('<feed')) {
                         const items = $('item').length > 0 ? $('item') : $('entry');
                         items.each((i, el) => {
-                            if (regionHeadlines.length < (category === 'finance' ? 1 : 2)) {
+                            if (regionHeadlines.length < ((category === 'finance' || category === 'reliability') ? 1 : 2)) {
                                 let title = $(el).find('title').text() || '';
                                 // Улучшенный поиск ссылки для разных форматов RSS/Atom
                                 let link = $(el).find('link').text() || $(el).find('link').attr('href') || $(el).find('guid').text() || '';
@@ -128,7 +153,7 @@ export async function GET(request) {
                     } else {
                         // Manual scraping
                         $(source.selector).each((i, el) => {
-                            if (regionHeadlines.length < (category === 'finance' ? 1 : 2)) {
+                            if (regionHeadlines.length < ((category === 'finance' || category === 'reliability') ? 1 : 2)) {
                                 let title = $(el).text().trim();
                                 let link = $(el).attr('href') || $(el).closest('a').attr('href') || '';
 

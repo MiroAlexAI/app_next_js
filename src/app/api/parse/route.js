@@ -43,6 +43,8 @@ export async function POST(request) {
 
         const contentSelectors = [
             'article',
+            '.entry-inner', // WordPress / Elementor
+            '.ast-article-single', // Astra Theme
             '[role="main"]',
             'main',
             '.post-content',
@@ -60,25 +62,29 @@ export async function POST(request) {
             const element = $(selector).first();
             if (element.length > 0) {
                 // Remove unwanted elements
-                element.find('script, style, nav, header, footer, aside, .ad, .advertisement, .social-share').remove();
+                element.find('script, style, nav, header, footer, aside, .ad, .advertisement, .social-share, button, form, .comments').remove();
 
                 content = element.text().trim();
 
-                if (content.length > 100) { // Only accept if substantial content
+                if (content.length > 200) { // Increased threshold for quality
                     break;
                 }
             }
         }
 
-        // Fallback: get all paragraphs if no content found
-        if (!content || content.length < 100) {
-            const paragraphs = $('p').map((i, el) => $(el).text().trim()).get();
+        // Fallback: get all meaningful paragraphs
+        if (!content || content.length < 200) {
+            const paragraphs = $('p')
+                .map((i, el) => $(el).text().trim())
+                .get()
+                .filter(p => p.length > 30); // Filter out short fragments
             content = paragraphs.join('\n\n');
         }
 
         // Clean up content
         content = content
-            .replace(/\s+/g, ' ')
+            .replace(/\t/g, ' ')
+            .replace(/[ ]+/g, ' ')
             .replace(/\n\s*\n/g, '\n\n')
             .trim();
 

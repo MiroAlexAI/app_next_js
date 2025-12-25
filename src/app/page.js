@@ -437,6 +437,12 @@ export default function Home() {
                 Финансы
               </button>
               <button
+                onClick={() => setNewsCategory("reliability")}
+                className={`text-[10px] font-black uppercase tracking-[0.4em] transition-colors ${newsCategory === "reliability" ? "text-orange-700 underline underline-offset-8" : "text-stone-700 hover:text-stone-500"}`}
+              >
+                ТОиР
+              </button>
+              <button
                 onClick={() => setNewsCategory("history")}
                 className={`text-[10px] font-black uppercase tracking-[0.4em] transition-colors ${newsCategory === "history" ? "text-orange-700 underline underline-offset-8" : "text-stone-700 hover:text-stone-500"}`}
               >
