@@ -4,7 +4,7 @@ import * as cheerio from 'cheerio';
 
 export async function POST(request) {
     try {
-        const { url } = await request.json();
+        let { url } = await request.json();
 
         if (!url) {
             return NextResponse.json(
@@ -13,12 +13,18 @@ export async function POST(request) {
             );
         }
 
+        url = url.trim();
+
         // Fetch the HTML content
         const response = await axios.get(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
             },
-            timeout: 10000
+            timeout: 15000 // Increased timeout for slower industrial servers
         });
 
         const html = response.data;
@@ -36,12 +42,15 @@ export async function POST(request) {
             $('meta[name="date"]').attr('content') ||
             $('.date').first().text().trim() ||
             $('.published').first().text().trim() ||
+            $('.node-news .submitted').first().text().trim() || // For older Drupal
             'Дата не найдена';
 
         // Extract main content - try multiple selectors
         let content = '';
 
         const contentSelectors = [
+            '.node-content', // Drupal / Avtprom
+            '.node-full .content', // Drupal
             'article',
             '.entry-inner', // WordPress / Elementor
             '.ast-article-single', // Astra Theme
@@ -62,22 +71,22 @@ export async function POST(request) {
             const element = $(selector).first();
             if (element.length > 0) {
                 // Remove unwanted elements
-                element.find('script, style, nav, header, footer, aside, .ad, .advertisement, .social-share, button, form, .comments').remove();
+                element.find('script, style, nav, header, footer, aside, .ad, .advertisement, .social-share, button, form, .comments, .related-posts').remove();
 
                 content = element.text().trim();
 
-                if (content.length > 200) { // Increased threshold for quality
+                if (content.length > 300) { // Increased threshold for quality
                     break;
                 }
             }
         }
 
         // Fallback: get all meaningful paragraphs
-        if (!content || content.length < 200) {
+        if (!content || content.length < 300) {
             const paragraphs = $('p')
                 .map((i, el) => $(el).text().trim())
                 .get()
-                .filter(p => p.length > 30); // Filter out short fragments
+                .filter(p => p.length > 25); // Slightly lowered for better coverage
             content = paragraphs.join('\n\n');
         }
 
@@ -89,8 +98,8 @@ export async function POST(request) {
             .trim();
 
         // Limit content length for display
-        if (content.length > 5000) {
-            content = content.substring(0, 5000) + '...';
+        if (content.length > 8000) { // Increased limit for detailed analysis
+            content = content.substring(0, 8000) + '...';
         }
 
         return NextResponse.json({
